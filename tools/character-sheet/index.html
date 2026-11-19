@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>D&D 2024 Character Sheet</title>
-<meta name="version" content="1.14.0">
+<meta name="version" content="1.14.1">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible:wght@400;700&family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,800&display=swap" rel="stylesheet">
 <style>
@@ -634,7 +634,7 @@ nav.tabs button[aria-selected=true]{color:var(--ink);border-bottom-color:var(--a
     </div>
     <div class="panel">
       <header><h2>Export</h2></header>
-      <p class="muted" style="margin:0">A readable copy of the whole sheet, to print, send to your DM, or paste into another tool or a note-taking app.</p>
+      <p class="muted" style="margin:0">A readable copy of the whole sheet, to print, send to your DM, or paste into another tool or a note-taking app. The PDF, the .md and the backup file all load back into this sheet exactly as they were: use Import a PDF character sheet or load a backup file, below.</p>
       <div class="row">
         <button data-act="expPdf" class="btn-accent">PDF</button>
         <button data-act="expMd">Text file (.md)</button>
@@ -649,8 +649,8 @@ nav.tabs button[aria-selected=true]{color:var(--ink);border-bottom-color:var(--a
         <button data-act="export" class="btn-accent">Generate and copy backup</button>
         <button data-act="download" id="dlBtn" hidden>Download backup file</button>
         <button data-act="import">Load the text pasted below</button>
-        <label class="btnlike">Import a PDF character sheet <input type="file" id="pdfFile" accept=".pdf,application/pdf" style="display:none"></label>
-        <label class="btn-ghost" style="cursor:pointer">or choose a .json file <input type="file" id="file" accept=".json,.txt,application/json" style="display:none"></label>
+        <label class="btnlike">Import a PDF character sheet <input type="file" id="pdfFile" accept=".pdf,application/pdf,.json,.md,.txt" style="display:none"></label>
+        <label class="btn-ghost" style="cursor:pointer">or load a backup file <input type="file" id="file" accept=".json,.md,.txt,.pdf,application/json,application/pdf" style="display:none"></label>
         <button data-act="blank" class="btn-bad" id="blankBtn" style="margin-left:auto">Erase and start over</button>
       </div>
       <textarea id="io" rows="5" spellcheck="false" aria-label="Backup text" placeholder="Paste a backup here to load it"></textarea>
@@ -719,7 +719,7 @@ nav.tabs button[aria-selected=true]{color:var(--ink);border-bottom-color:var(--a
 
 <script>
 "use strict";
-const APP_VERSION="1.14.0";
+const APP_VERSION="1.14.1";
 const ABILS=[["str","Strength"],["dex","Dexterity"],["con","Constitution"],["int","Intelligence"],["wis","Wisdom"],["cha","Charisma"]];
 const ABBR={str:"STR",dex:"DEX",con:"CON",int:"INT",wis:"WIS",cha:"CHA"};
 const SKILLS=[["acrobatics","Acrobatics","dex"],["animal","Animal Handling","wis"],["arcana","Arcana","int"],["athletics","Athletics","str"],["deception","Deception","cha"],["history","History","int"],["insight","Insight","wis"],["intimidation","Intimidation","cha"],["investigation","Investigation","int"],["medicine","Medicine","wis"],["nature","Nature","int"],["perception","Perception","wis"],["performance","Performance","cha"],["persuasion","Persuasion","cha"],["religion","Religion","int"],["sleight","Sleight of Hand","dex"],["stealth","Stealth","dex"],["survival","Survival","wis"]];
@@ -2007,6 +2007,10 @@ function exportMd(){
   }
   return L.join("\n");
 }
+/* every exported PDF and .md carries a full backup, so the sheet can load its own exports exactly */
+const BK_TAG="DND2024-SHEET-BACKUP";
+function backupB64(){S.appVersion=APP_VERSION;const u=new TextEncoder().encode(JSON.stringify(S));let s="";for(let i=0;i<u.length;i+=32768)s+=String.fromCharCode.apply(null,u.subarray(i,i+32768));return btoa(s)}
+function findBackup(text){const m=new RegExp(BK_TAG+":([A-Za-z0-9+/=]+)").exec(String(text||""));if(!m)return null;try{const b=atob(m[1]),u=new Uint8Array(b.length);for(let i=0;i<b.length;i++)u[i]=b.charCodeAt(i);return new TextDecoder().decode(u)}catch(e){return null}}
 function exportPdf(){
   const W=612,H=792,M=44,CW=W-2*M,pages=[];let ops=[],y=H-M;
   let pimg=null;try{const m=/^data:image\/jpeg;base64,(.+)$/.exec(S.portrait||"");if(m&&num(S.portraitW)&&num(S.portraitH))pimg={w:num(S.portraitW),h:num(S.portraitH),bin:atob(m[1])}}catch(e){pimg=null}
@@ -2046,6 +2050,7 @@ function exportPdf(){
   const info=add("<< /Title ("+enc(S.name||"Character")+") /Producer (D&D 2024 Character Sheet) >>");
   let out="%PDF-1.4\n%\xE2\xE3\xCF\xD3\n";const off=[];
   objs.forEach((o,k)=>{off.push(out.length);out+=(k+1)+" 0 obj\n"+o+"\nendobj\n"});
+  out+="%"+BK_TAG+":"+backupB64()+"\n";
   const xr=out.length;out+="xref\n0 "+(objs.length+1)+"\n0000000000 65535 f \n"+off.map(o=>String(o).padStart(10,"0")+" 00000 n \n").join("")+"trailer\n<< /Size "+(objs.length+1)+" /Root "+cat+" 0 R /Info "+info+" 0 R >>\nstartxref\n"+xr+"\n%%EOF";
   const u=new Uint8Array(out.length);for(let k=0;k<out.length;k++)u[k]=out.charCodeAt(k)&255;return u;
 }
@@ -3385,7 +3390,7 @@ const ACT={
   effToggle:v=>{const e=S.effects.find(x=>x.id===v);if(e){e.on=e.on===false;renderEffects()}},
   effRound:()=>{const end=effTick(1);renderEffects();toast("Next round",end.length?"Ended: "+end.join(", "):"Effects counted down by one round","")},
   expPdf:()=>{let u;try{u=exportPdf()}catch(e){toast("PDF export failed",String(e&&e.message||e),"");return}offerFile(fileBase()+"_"+today()+".pdf",u,"application/pdf")},
-  expMd:()=>offerFile(fileBase()+"_"+today()+".md",exportMd(),"text/markdown"),
+  expMd:()=>offerFile(fileBase()+"_"+today()+".md",exportMd()+"\n\n<!-- "+BK_TAG+":"+backupB64()+" -->\n","text/markdown"),
   expJson:()=>{S.appVersion=APP_VERSION;offerFile(fileBase()+"_"+today()+".json",JSON.stringify(S,null,1),"application/json")},
   expCopy:()=>{const t=exportMd();try{navigator.clipboard.writeText(t).then(()=>toast("Sheet copied","Paste it into a message, a note or another tool",""),()=>{$("io").value=t;toast("Copy blocked","The text is in the box below: select it and copy it","")})}catch(e){$("io").value=t;toast("Copy blocked","The text is in the box below: select it and copy it","")}},
   theme:v=>{S.theme=v==="auto"?"":v;renderAppearance()},
@@ -3503,7 +3508,7 @@ const ACT={
   import:()=>importText($("io").value)
 };
 function importText(t){
-  try{const o=JSON.parse(t);if(!o||typeof o!=="object"||!o.abil||!Array.isArray(o.classes))throw 0;const fresh=importSlot();if(!fresh)snapshot();S=normalize(o);S.example=false;syncSubSpells();renderLists();refresh();saveNow();
+  try{let o;try{o=JSON.parse(t)}catch(e){const b=findBackup(t);if(!b)throw e;o=JSON.parse(b)}if(!o||typeof o!=="object"||!o.abil||!Array.isArray(o.classes))throw 0;const fresh=importSlot();if(!fresh)snapshot();S=normalize(o);S.example=false;syncSubSpells();renderLists();refresh();saveNow();
     toast(fresh?"Loaded as a new character":"Sheet loaded",S.name||"Unnamed character","",null,!fresh)}
   catch(e){toast("Unreadable text","Paste a complete backup generated by this sheet","")}
 }
@@ -3843,6 +3848,9 @@ function showPdf(title,lines,unused,canApply,hasText){
   $("pdfIn").hidden=false;
 }
 async function importPdf(file){
+  if(!/\.pdf$/i.test(file.name)&&file.type!=="application/pdf"){importText(await file.text());return}
+  try{const u=new Uint8Array(await file.arrayBuffer());let s="";for(let i=0;i<u.length;i+=32768)s+=String.fromCharCode.apply(null,u.subarray(i,i+32768));
+    const b=findBackup(s);if(b){importText(b);return}}catch(e){}
   toast("Reading the PDF…",file.name,"");
   try{await loadPdfJs()}catch(e){toast("PDF reader could not load","It needs an internet connection; try again once online","");return}
   try{
@@ -3970,7 +3978,7 @@ $("castDlg").addEventListener("click",e=>{if(e.target.id==="castDlg"){$("castDlg
 document.addEventListener("toggle",e=>{const d=e.target;if(d&&d.dataset&&d.dataset.it){if(d.open)openIt.add(d.dataset.it);else openIt.delete(d.dataset.it)}if(d&&d.dataset&&d.dataset.ef){if(d.open)openEff.add(d.dataset.ef);else openEff.delete(d.dataset.ef)}},true);
 document.addEventListener("change",onInput);
 $("portraitFile").addEventListener("change",e=>{const f=e.target.files[0];e.target.value="";if(f)loadPortrait(f)});
-$("file").addEventListener("change",e=>{const f=e.target.files[0];if(!f)return;const r=new FileReader();r.onload=()=>importText(String(r.result));r.readAsText(f);e.target.value=""});
+$("file").addEventListener("change",e=>{const f=e.target.files[0];if(!f)return;if(/\.pdf$/i.test(f.name)||f.type==="application/pdf"){e.target.value="";importPdf(f);return}const r=new FileReader();r.onload=()=>importText(String(r.result));r.readAsText(f);e.target.value=""});
 
 document.querySelectorAll(".appVer").forEach(e=>e.textContent=APP_VERSION);
 loadRoster();S=load();syncSubSpells();build();renderLists();refresh();renderRoster(true);applyLayout();cloudInit();
