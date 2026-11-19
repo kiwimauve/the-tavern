@@ -1,0 +1,266 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>The Tavern — D&amp;D 2024 tools</title>
+<meta name="description" content="Free D&D 2024 tools for our table: an interactive character sheet and a combat tracker for the Dungeon Master.">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Cpath d='M32 3 58 18v28L32 61 6 46V18z' fill='%23e0b25a'/%3E%3Cpath d='M32 14 47 40H17z' fill='%232a1d14'/%3E%3C/svg%3E">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Alegreya:ital,wght@0,400;0,600;0,800;1,400&family=Pirata+One&display=swap" rel="stylesheet">
+<style>
+/* Plan: a tavern at night. One bold thing: the hanging signboard.
+   Everything else is quiet: the tools read like the menu chalked on the wall. */
+:root{
+  --soot:#140d08;      /* the room */
+  --oak:#2a1d14;       /* the wall board */
+  --oak-hi:#4a3322;
+  --candle:#e0b25a;    /* warm light, links, focus */
+  --wine:#9c3a2f;      /* stamps */
+  --chalk:#efe4cc;     /* text */
+  --chalk-dim:#b9a98b;
+  --sign:"Pirata One",Georgia,serif;
+  --body:"Alegreya",Georgia,"Times New Roman",serif;
+}
+*{box-sizing:border-box}
+html{background:var(--soot)}
+body{margin:0;color:var(--chalk);font:1.125rem/1.6 var(--body);min-height:100vh;
+  background:
+    radial-gradient(ellipse 60% 42% at 50% 0%,rgba(224,178,90,.22),transparent 70%),
+    radial-gradient(ellipse 90% 60% at 50% 110%,rgba(156,58,47,.14),transparent 70%),
+    var(--soot)}
+a{color:var(--candle)}
+:focus-visible{outline:2px solid var(--candle);outline-offset:3px;border-radius:3px}
+.wrap{max-width:46rem;margin:0 auto;padding:0 1.25rem}
+
+/* ---------- signboard ---------- */
+.hang{display:flex;justify-content:center;padding-top:0}
+.sign{position:relative;margin-top:5.5rem;transform-origin:50% -5.5rem;animation:sway 3.2s cubic-bezier(.36,0,.3,1) 1 both}
+.sign::before,.sign::after{content:"";position:absolute;top:-5.5rem;width:4px;height:5.6rem;
+  background:repeating-linear-gradient(180deg,#8a7350 0 7px,#3b2e1d 7px 9px);border-radius:2px}
+.sign::before{left:16%}.sign::after{right:16%}
+.board{position:relative;padding:1.4rem 2.6rem 1.5rem;border-radius:14px 14px 18px 18px/12px 12px 22px 22px;text-align:center;
+  background:
+    repeating-linear-gradient(92deg,rgba(0,0,0,.0) 0 22px,rgba(0,0,0,.12) 23px 24px,rgba(0,0,0,0) 25px 61px),
+    linear-gradient(180deg,#6b4a2f,#4c3320 55%,#3a2718);
+  box-shadow:inset 0 0 0 5px #2b1c11,inset 0 0 0 7px #a07c45,inset 0 0 28px rgba(0,0,0,.55),0 18px 40px rgba(0,0,0,.6)}
+.board h1{margin:0;font:400 clamp(2.9rem,9vw,4.6rem)/1 var(--sign);color:#f0c46a;letter-spacing:.01em;
+  text-shadow:0 2px 0 #2b1c11,0 0 22px rgba(240,196,106,.35)}
+.board p{margin:.35rem 0 0;font-style:italic;color:#e9d7b2;font-size:1.05rem}
+@keyframes sway{0%{transform:rotate(-7deg)}35%{transform:rotate(4.5deg)}62%{transform:rotate(-2deg)}82%{transform:rotate(.8deg)}100%{transform:rotate(0)}}
+@media (prefers-reduced-motion:reduce){.sign{animation:none}}
+
+.intro{text-align:center;color:var(--chalk-dim);margin:2.4rem auto 0;max-width:34rem}
+
+/* ---------- the menu on the wall ---------- */
+.menu{margin:2.6rem 0 0;padding:2rem 2rem 1.4rem;border-radius:6px;
+  background:linear-gradient(180deg,rgba(255,255,255,.025),rgba(0,0,0,.15)),var(--oak);
+  box-shadow:inset 0 0 0 1px var(--oak-hi),inset 0 0 60px rgba(0,0,0,.5)}
+.menu h2{margin:0 0 .3rem;font:400 2rem/1.1 var(--sign);color:var(--candle);text-align:center}
+.menu>p{margin:0 0 1rem;text-align:center;color:var(--chalk-dim);font-style:italic}
+.tools{list-style:none;margin:0;padding:0}
+.tool{display:grid;grid-template-columns:1fr auto;gap:.2rem 1.2rem;align-items:baseline;padding:1.25rem 0;border-top:1px dashed rgba(239,228,204,.22)}
+.tool:first-child{border-top:0}
+.tool h3{margin:0;font-size:1.45rem;font-weight:800;line-height:1.2}
+.tool h3 a{color:var(--chalk);text-decoration:none}
+.tool h3 a:hover{color:var(--candle)}
+.who{grid-column:2;grid-row:1;font-style:italic;color:var(--chalk-dim);font-size:.95rem;white-space:nowrap}
+.tool .desc{grid-column:1/-1;margin:.15rem 0 .55rem;color:var(--chalk);max-width:38rem}
+.tool .foot{grid-column:1/-1;display:flex;flex-wrap:wrap;gap:.6rem 1.1rem;align-items:center}
+.open{display:inline-block;padding:.45rem 1.1rem;border-radius:999px;background:var(--candle);color:#24170c;font-weight:800;text-decoration:none;font-size:1rem}
+.open:hover{background:#f0c46a}
+.ver{font-size:.9rem;color:var(--chalk-dim)}
+.soon .stamp{display:inline-block;transform:rotate(-4deg);border:2px solid var(--wine);color:#d67a6c;border-radius:4px;padding:0 .5rem;font-size:.9rem;font-weight:600}
+.soon h3{color:var(--chalk-dim)}
+
+/* ---------- notes ---------- */
+.notes{margin:2.4rem 0 0;display:grid;gap:1rem 2rem;grid-template-columns:repeat(auto-fit,minmax(15rem,1fr))}
+.notes h2{font:600 1.15rem/1.3 var(--body);margin:0 0 .3rem;color:var(--candle)}
+.notes p{margin:0;color:var(--chalk-dim);font-size:1rem}
+footer{margin:3rem 0 0;padding:1.4rem 0 2.4rem;border-top:1px solid rgba(239,228,204,.12);font-size:.82rem;color:#8f8169;line-height:1.5}
+footer a{color:#b9a98b}
+
+@media (max-width:560px){
+  .board{padding:1.1rem 1.4rem 1.2rem}
+  .menu{padding:1.4rem 1.1rem 1rem}
+  .tool{grid-template-columns:1fr}
+  .who{grid-column:1;grid-row:auto}
+}
+
+/* ---------- guest ledger (accounts) ---------- */
+.ledger{margin:2rem 0 0;padding:1.1rem 1.4rem;border-radius:6px;border:1px solid rgba(224,178,90,.35);background:rgba(224,178,90,.06);display:flex;flex-wrap:wrap;gap:.8rem 1.4rem;align-items:center;justify-content:space-between}
+.ledger p{margin:0;flex:1 1 20rem;color:var(--chalk)}
+.ledger p b{color:var(--candle)}
+.ledger .acts{display:flex;flex-wrap:wrap;gap:.6rem}
+.btn{font:inherit;font-size:1rem;cursor:pointer;padding:.45rem 1.1rem;border-radius:999px;border:1px solid var(--candle);background:transparent;color:var(--candle);font-weight:600}
+.btn:hover{background:rgba(224,178,90,.12)}
+.btn.main{background:var(--candle);color:#24170c;font-weight:800}
+.btn.main:hover{background:#f0c46a}
+.btn.bad{border-color:#d67a6c;color:#e79a8d}
+.btn:disabled{opacity:.55;cursor:wait}
+.linkbtn{font:inherit;font-size:.95rem;background:none;border:0;padding:0;color:var(--candle);text-decoration:underline;cursor:pointer}
+dialog{width:min(30rem,calc(100% - 2rem));padding:0;border:1px solid var(--oak-hi);border-radius:8px;background:var(--oak);color:var(--chalk);box-shadow:0 24px 60px rgba(0,0,0,.7)}
+dialog::backdrop{background:rgba(10,6,3,.72)}
+.dlg{padding:1.4rem 1.5rem 1.5rem;display:flex;flex-direction:column;gap:.9rem}
+.dlg header{display:flex;justify-content:space-between;align-items:baseline;gap:1rem}
+.dlg h2{margin:0;font:400 1.9rem/1.1 var(--sign);color:var(--candle)}
+.x{font:inherit;font-size:1.4rem;line-height:1;background:none;border:0;color:var(--chalk-dim);cursor:pointer;padding:.2rem .4rem}
+.dlg p{margin:0;color:var(--chalk-dim);font-size:1rem}
+.dlg label{display:flex;flex-direction:column;gap:.25rem;font-size:.95rem;color:var(--chalk-dim)}
+.dlg input[type=text],.dlg input[type=password]{font:inherit;font-size:1.05rem;color:var(--chalk);background:#1d140d;border:1px solid var(--oak-hi);border-radius:6px;padding:.5rem .7rem}
+.dlg input:focus{outline:2px solid var(--candle);outline-offset:1px}
+.dlg .check{flex-direction:row;align-items:flex-start;gap:.55rem;color:var(--chalk)}
+.dlg .check input{margin-top:.35rem;accent-color:var(--candle)}
+.dlg .row{display:flex;flex-wrap:wrap;gap:.6rem;align-items:center}
+.err{margin:0;padding:.5rem .75rem;border-radius:6px;background:rgba(156,58,47,.25);border:1px solid #9c3a2f;color:#f2c1b8;font-size:.98rem}
+.ok{margin:0;padding:.5rem .75rem;border-radius:6px;background:rgba(224,178,90,.12);border:1px solid rgba(224,178,90,.45);color:var(--chalk);font-size:.98rem}
+.code{font:700 clamp(1.35rem,5.5vw,1.75rem)/1.2 var(--body);letter-spacing:.12em;text-align:center;padding:.9rem .5rem;border-radius:6px;background:#efe4cc;color:#24170c;user-select:all;font-variant-numeric:tabular-nums}
+.sect{border-top:1px dashed rgba(239,228,204,.2);padding-top:.9rem;display:flex;flex-direction:column;gap:.7rem}
+.sect h3{margin:0;font-size:1.1rem}
+</style>
+<script src="firebase-config.js"></script>
+<script src="account.js"></script>
+</head>
+<body>
+<header class="hang">
+  <div class="sign"><div class="board">
+    <h1 id="siteName">The Tavern</h1>
+    <p>Tools for our D&amp;D 2024 table</p>
+  </div></div>
+</header>
+
+<main class="wrap">
+  <p class="intro">Pull up a chair. Everything here runs in your browser and is free to use with your group.</p>
+
+  <section class="ledger" id="ledger" aria-label="Your account" hidden></section>
+
+  <section class="menu" aria-labelledby="menuTitle">
+    <h2 id="menuTitle">On the menu tonight</h2>
+    <p>Pick a tool. It opens in this tab.</p>
+    <ul class="tools" id="tools"></ul>
+  </section>
+
+  <section class="notes" aria-label="Good to know">
+    <div>
+      <h2>Where your data is kept</h2>
+      <p>Without an account, characters and encounters stay in the browser you use. With an account, they're also kept online, and only you can see them. An account is just a username and a password: no email, no real name.</p>
+    </div>
+    <div>
+      <h2>Changing devices</h2>
+      <p>Sign in on the other device and everything is there. Without an account, the character sheet's Notes and backup tab saves your character as a file you can load elsewhere or send to your DM.</p>
+    </div>
+  </section>
+
+  <footer>
+    <p id="siteVer"></p>
+    <p>This work includes material from the System Reference Document 5.2.1 (“SRD 5.2.1”) by Wizards of the Coast LLC, available at <a href="https://www.dndbeyond.com/srd">https://www.dndbeyond.com/srd</a>. The SRD 5.2.1 is licensed under the Creative Commons Attribution 4.0 International License, available at <a href="https://creativecommons.org/licenses/by/4.0/legalcode">https://creativecommons.org/licenses/by/4.0/legalcode</a>. Unofficial fan content, not affiliated with Wizards of the Coast.</p>
+  </footer>
+</main>
+
+<dialog id="acct" aria-labelledby="acctTitle"><form class="dlg" id="acctForm" method="dialog" novalidate></form></dialog>
+
+<script>
+/* To add a tool: put its folder in tools/ and add one entry here. */
+const SITE_VERSION="1.1.0";
+const TOOLS=[
+  {name:"Character Sheet",who:"For players",href:"tools/character-sheet/",cta:"Open the character sheet",version:"1.14.0",
+   desc:"An interactive 2024 character sheet: click any bonus to roll, multiclassing, subclasses, prepared spells, feats, magic items, level up, PDF import and export."},
+  {name:"DM Combat Tracker",who:"For the Dungeon Master",href:"tools/combat-tracker/",cta:"Open the combat tracker",version:"1.7.0",
+   desc:"Run a fight from start to finish: initiative order, the SRD bestiary with clickable stat blocks, monster attacks in one click, your saved party and the encounter difficulty."},
+  {name:"More tools are on the way",who:"",soon:true,
+   desc:"New tools for the table will show up here."}
+];
+const esc=s=>String(s).replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+document.getElementById("tools").innerHTML=TOOLS.map(t=>t.soon
+ ?`<li class="tool soon"><h3>${esc(t.name)}</h3><span class="who"><span class="stamp">Soon</span></span><p class="desc">${esc(t.desc)}</p></li>`
+ :`<li class="tool"><h3><a href="${esc(t.href)}">${esc(t.name)}</a></h3><span class="who">${esc(t.who)}</span><p class="desc">${esc(t.desc)}</p>
+   <div class="foot"><a class="open" href="${esc(t.href)}">${esc(t.cta||"Open")}</a><span class="ver">Version ${esc(t.version)}</span></div></li>`).join("");
+document.getElementById("siteVer").textContent="Site version "+SITE_VERSION;
+
+/* ---------- accounts ---------- */
+(function(){
+  const T=window.Tavern,ledger=document.getElementById("ledger"),dlg=document.getElementById("acct"),form=document.getElementById("acctForm");
+  if(!T||!T.available){return}
+  let view="signin",pending=null;
+  function renderLedger(){
+    if(!T.available){ledger.hidden=true;return}
+    const u=T.user();ledger.hidden=false;
+    ledger.innerHTML=u
+      ?`<p>Signed in as <b>${esc(u.username)}</b>. Your characters and encounters are saved to your account and follow you on every device.</p>
+        <div class="acts"><button class="btn" type="button" data-open="manage">Account settings</button></div>`
+      :`<p>Sign in to keep your characters and encounters in your account and find them on any device. Without an account, they stay in this browser.</p>
+        <div class="acts"><button class="btn main" type="button" data-open="signin">Sign in</button><button class="btn" type="button" data-open="signup">Create an account</button></div>`;
+  }
+  const head=(title)=>`<header><h2 id="acctTitle">${title}</h2><button class="x" type="button" data-close aria-label="Close">\u2715</button></header>`;
+  const userF=(ac)=>`<label>Username<input type="text" name="user" autocomplete="username" autocapitalize="none" spellcheck="false" maxlength="20" required></label>`;
+  const passF=(label,name,ac)=>`<label>${label}<input type="password" name="${name}" autocomplete="${ac}" minlength="6" required></label>`;
+  const VIEWS={
+    signin:()=>head("Sign in")+userF()+passF("Password","pass","current-password")+
+      `<p class="err" data-err hidden></p><div class="row"><button class="btn main" type="submit">Sign in</button><button class="linkbtn" type="button" data-go="recover">I forgot my password</button></div>
+       <p>No account yet? <button class="linkbtn" type="button" data-go="signup">Create one</button></p>`,
+    signup:()=>head("Create an account")+
+      `<p>Choose a username and a password. No email or real name needed. Don't reuse a password you use elsewhere.</p>`+
+      userF()+`<p style="font-size:.88rem;margin-top:-.5rem">3 to 20 characters: letters, numbers, - or _</p>`+
+      passF("Password (at least 6 characters)","pass","new-password")+passF("Type the password again","pass2","new-password")+
+      `<p class="err" data-err hidden></p><div class="row"><button class="btn main" type="submit">Create my account</button></div>
+       <p>Already have one? <button class="linkbtn" type="button" data-go="signin">Sign in</button></p>`,
+    recover:()=>head("Reset your password")+
+      `<p>Enter the recovery code you saved when you created your account, then choose a new password.</p>`+
+      userF()+`<label>Recovery code<input type="text" name="code" autocomplete="off" autocapitalize="characters" spellcheck="false" placeholder="ABCD-EFGH-JKMN-PQRS" required></label>`+
+      passF("New password (at least 6 characters)","pass","new-password")+
+      `<p class="err" data-err hidden></p><div class="row"><button class="btn main" type="submit">Set my new password</button><button class="linkbtn" type="button" data-go="signin">Back to sign in</button></div>
+       <p style="font-size:.9rem">Lost the code too? The account can't be recovered. Create a new one; characters still in this browser will move into it.</p>`,
+    code:()=>head("Your recovery code")+
+      `<p>This code is the only way to get back into your account if you forget your password. Nobody can send it to you again.</p>
+       <div class="code" aria-label="Recovery code">${esc(pending.code)}</div>
+       <div class="row"><button class="btn" type="button" data-copy>Copy the code</button><button class="btn" type="button" data-dl>Download it as a file</button></div>
+       <p class="ok" data-msg hidden></p>
+       <label class="check"><input type="checkbox" name="saved">I saved my recovery code somewhere safe</label>
+       <div class="row"><button class="btn main" type="submit" disabled>Continue</button></div>`,
+    manage:()=>{const u=T.user();return head("Account settings")+
+      `<p>Signed in as <b style="color:var(--candle)">${esc(u?u.username:"")}</b>.</p>
+       <p class="ok" data-msg hidden></p><p class="err" data-err hidden></p>
+       <div class="sect"><h3>Sign out</h3><p>Your characters and encounters leave this browser but stay in your account. Sign out on a computer you share with others.</p>
+         <div class="row"><button class="btn" type="button" data-act="signout">Sign out</button></div></div>
+       <div class="sect"><h3>Change your password</h3>${passF("Current password","old","current-password")}${passF("New password (at least 6 characters)","new","new-password")}
+         <div class="row"><button class="btn" type="button" data-act="chpass">Change my password</button></div></div>
+       <div class="sect"><h3>Get a new recovery code</h3><p>Lost your code, or think someone saw it? The old code stops working.</p>${passF("Password","rpass","current-password")}
+         <div class="row"><button class="btn" type="button" data-act="newcode">Get a new code</button></div></div>
+       <div class="sect"><h3>Delete my account</h3><p>Deletes your account and everything saved in it, for good. Download your characters first from the sheet's Notes and backup tab if you want to keep them.</p>${passF("Password","dpass","current-password")}
+         <div class="row"><button class="btn bad" type="button" data-act="delete">Delete my account and data</button></div></div>`}
+  };
+  function show(v){view=v;form.innerHTML=VIEWS[v]();if(!dlg.open)dlg.showModal();if(v==="code")form.querySelector("button[data-copy]").focus();else if(v==="manage")form.querySelector("[data-act=signout]").focus();else form.querySelector("input")?.focus()}
+  function err(m){const e=form.querySelector("[data-err]");if(e){e.textContent=m;e.hidden=!m;if(m)e.scrollIntoView({block:"nearest"})}}
+  function msg(m){const e=form.querySelector("[data-msg]");if(e){e.textContent=m;e.hidden=!m}}
+  async function busy(btn,label,fn){const old=btn.textContent;btn.disabled=true;btn.textContent=label;err("");msg("");
+    try{await fn()}catch(e){err(e.userMessage||"Something went wrong. Try again.");if(!e.userMessage)console.error(e)}finally{if(btn.isConnected){btn.disabled=false;btn.textContent=old}}}
+  const val=n=>(form.elements[n]&&form.elements[n].value)||"";
+
+  ledger.addEventListener("click",e=>{const b=e.target.closest("[data-open]");if(b)show(b.dataset.open)});
+  form.addEventListener("click",async e=>{
+    const b=e.target.closest("button");if(!b)return;
+    if(b.hasAttribute("data-close")){dlg.close();return}
+    if(b.dataset.go){show(b.dataset.go);return}
+    if(b.hasAttribute("data-copy")){try{await navigator.clipboard.writeText(pending.code);msg("Code copied. Paste it somewhere safe, like a note or your password manager.")}catch(_){msg("Select the code and copy it by hand.")}return}
+    if(b.hasAttribute("data-dl")){const a=document.createElement("a");a.href=URL.createObjectURL(new Blob([`The Tavern recovery code\nUsername: ${pending.username}\nRecovery code: ${pending.code}\n\nKeep this file somewhere safe. It lets you choose a new password if you forget yours.\n`],{type:"text/plain"}));a.download=`tavern-recovery-code-${pending.username}.txt`;document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(a.href),4000);msg("File downloaded.");return}
+    const act=b.dataset.act;if(!act)return;
+    if(act==="signout")await busy(b,"Signing out\u2026",async()=>{await T.signOut();dlg.close()});
+    if(act==="chpass")await busy(b,"Changing\u2026",async()=>{await T.changePassword(val("old"),val("new"));form.elements.old.value="";form.elements.new.value="";msg("Password changed. Use the new one next time you sign in.")});
+    if(act==="newcode")await busy(b,"Making a code\u2026",async()=>{const r=await T.newRecoveryCode(val("rpass"));pending={username:T.user().username,code:r.code,after:"manage"};show("code")});
+    if(act==="delete"){if(!window.confirm("Delete your account and all the characters and encounters saved in it? This can't be undone."))return;await busy(b,"Deleting\u2026",async()=>{await T.deleteAccount(val("dpass"));dlg.close()})}
+  });
+  form.addEventListener("change",e=>{if(e.target.name==="saved")form.querySelector('button[type=submit]').disabled=!e.target.checked});
+  form.addEventListener("submit",async e=>{
+    e.preventDefault();const b=form.querySelector('button[type=submit]'),v=view;
+    if(v==="signin")await busy(b,"Signing in\u2026",async()=>{await T.signIn(val("user"),val("pass"));dlg.close()});
+    if(v==="signup")await busy(b,"Creating\u2026",async()=>{if(val("pass")!==val("pass2")){const x=new Error();x.userMessage="The two passwords are different.";throw x}const r=await T.signUp(val("user"),val("pass"));pending={username:r.username,code:r.code,after:"close"};show("code")});
+    if(v==="recover")await busy(b,"Checking\u2026",async()=>{await T.recover(val("user"),val("code"),val("pass"));dlg.close()});
+    if(v==="code"){if(pending&&pending.after==="manage"){pending=null;show("manage");msg("Your new recovery code is active. The old one no longer works.")}else{pending=null;dlg.close()}}
+  });
+  dlg.addEventListener("cancel",e=>{if(view==="code")e.preventDefault()});
+  T.onChange(renderLedger);
+  T.ready.then(renderLedger);
+})();
+</script>
+</body>
+</html>
