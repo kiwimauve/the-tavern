@@ -4,27 +4,83 @@ rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
 
+    function signedIn() { return request.auth != null; }
+    function me() { return request.auth.token.email.split('@')[0]; }
+    // The site owner: a document named after the username in the "admins" collection, created by hand in the console.
+    function isAdmin() { return signedIn() && exists(/databases/$(database)/documents/admins/$(me())); }
+
+    match /admins/{name} {
+      allow get: if signedIn() && name == me();
+      allow list, write: if false;
+    }
+
     // One document per username: the account key, encrypted twice (password and recovery code).
-    // Anyone may read ONE login by its exact username (needed to sign in), nobody may list them.
+    // Anyone may read ONE login by its exact username (needed to sign in). Only the owner may count them.
     match /logins/{name} {
       allow get: if true;
-      allow list: if false;
-      allow create: if request.auth != null
+      allow list: if isAdmin();
+      allow create: if signedIn()
         && name.matches('^[a-z0-9_-]{3,20}$')
         && request.auth.token.email == name + '@players.tavern.local'
         && request.resource.data.uid == request.auth.uid;
-      allow update: if request.auth != null
+      allow update: if signedIn()
         && resource.data.uid == request.auth.uid
         && request.resource.data.uid == request.auth.uid;
-      allow delete: if request.auth != null && resource.data.uid == request.auth.uid;
+      allow delete: if signedIn() && resource.data.uid == request.auth.uid;
     }
 
     // Each tool's records for each person: tools/<tool>/<user id>/<record>. Only that person can read or write them.
     match /tools/{tool}/{uid}/{docId} {
-      allow read, delete: if request.auth != null && request.auth.uid == uid;
-      allow create, update: if request.auth != null && request.auth.uid == uid
+      allow read, delete: if signedIn() && request.auth.uid == uid;
+      allow create, update: if signedIn() && request.auth.uid == uid
         && request.resource.data.json is string
         && request.resource.data.json.size() < 900000;
+    }
+
+    // Feedback: anyone can send a message (with or without an account). Only the owner can read, sort and delete.
+    match /feedback/{id} {
+      allow create: if request.resource.data.keys().hasOnly(['kind', 'message', 'page', 'version', 'created', 'user', 'shot'])
+        && request.resource.data.kind in ['idea', 'problem', 'other']
+        && request.resource.data.message is string
+        && request.resource.data.message.size() > 0
+        && request.resource.data.message.size() <= 2000
+        && request.resource.data.page is string && request.resource.data.page.size() <= 40
+        && request.resource.data.version is string && request.resource.data.version.size() <= 20
+        && request.resource.data.created is int
+        && (!('shot' in request.resource.data) || request.resource.data.shot == true)
+        && (!('user' in request.resource.data)
+            || (signedIn() && request.resource.data.user + '@players.tavern.local' == request.auth.token.email));
+      allow read, delete: if isAdmin();
+      allow update: if isAdmin()
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status'])
+        && request.resource.data.status in ['new', 'done'];
+    }
+
+    // A screenshot attached to a message: one per message, only if that message says it has one.
+    match /feedbackShots/{id} {
+      allow create: if request.resource.data.keys().hasOnly(['data', 'created'])
+        && request.resource.data.data is string
+        && request.resource.data.data.size() <= 900000
+        && request.resource.data.created is int
+        && get(/databases/$(database)/documents/feedback/$(id)).data.get('shot', false) == true;
+      allow get, delete: if isAdmin();
+      allow list, update: if false;
+    }
+
+    // Anonymous daily counters: stats/<YYYY-MM-DD>. Anyone can add 1 to one counter at a time; only the owner can read.
+    // To count a new tool's visits, add 'v_<tool_folder_with_underscores>' to this list.
+    function statKeys() { return ['browsers', 'members', 'signins', 'signups', 'feedback', 'v_home', 'v_character_sheet', 'v_combat_tracker']; }
+    match /stats/{day} {
+      allow read: if isAdmin();
+      allow create: if day.matches('^[0-9]{4}-[0-9]{2}-[0-9]{2}$')
+        && request.resource.data.keys().size() == 1
+        && request.resource.data.keys().hasOnly(statKeys())
+        && request.resource.data[request.resource.data.keys()[0]] == 1;
+      allow update: if request.resource.data.diff(resource.data).affectedKeys().size() == 1
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(statKeys())
+        && request.resource.data[request.resource.data.diff(resource.data).affectedKeys().toList()[0]]
+           == resource.data.get(request.resource.data.diff(resource.data).affectedKeys().toList()[0], 0) + 1;
+      allow delete: if false;
     }
 
     // Everything else is closed.

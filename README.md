@@ -1,15 +1,17 @@
-# The Tavern — site d'outils D&D 2024 (v1.1.0)
+# The Tavern — site d'outils D&D 2024 (v1.3.0)
 
 Site statique, avec des comptes optionnels (nom d'usager + mot de passe) gérés par Firebase.
 
 ```
 index.html                       page d'accueil + panneau de compte
 account.js                       comptes : connexion, code de récupération, synchronisation des outils
+feedback.js                      bouton « Feedback » et fenêtre de commentaires (avec capture d'écran), sur toutes les pages
+admin/index.html                 page propriétaire : statistiques et messages (réservée à ton compte)
 firebase-config.js               TES paramètres Firebase (à remplir, étape B4)
 firestore.rules                  règles de sécurité à coller dans Firebase (étape B3)
 404.html, .nojekyll              pages et réglage pour GitHub Pages
-tools/character-sheet/index.html fiche personnage (v1.14.0)
-tools/combat-tracker/index.html  DM Combat Tracker (v1.7.0)
+tools/character-sheet/index.html fiche personnage (v1.16.0)
+tools/combat-tracker/index.html  DM Combat Tracker (v1.9.0)
 ```
 
 Tant que `firebase-config.js` est vide, le site marche comme avant : tout est sauvegardé dans le navigateur et le panneau de compte n'apparaît pas.
@@ -79,11 +81,42 @@ Ouvre ton site, clique **Create an account**, crée un compte, puis ouvre la fic
 
 Dans **Authentication → Users**, tu vois les noms d'usager (sous la forme `nom@players.tavern.local`) et leurs dates de connexion. Dans **Firestore**, tu vois les données, mais les mots de passe et codes n'y sont que sous forme chiffrée. Pour supprimer un compte abandonné : supprime l'utilisateur dans Authentication, son document dans `logins`, et ses dossiers dans `tools`.
 
+## Page propriétaire : messages et statistiques
+
+Adresse : `https://kiwimauve.github.io/the-tavern/admin/`. Quand tu es connecté avec ton compte propriétaire, un bouton **Owner page** apparaît aussi sur l'accueil.
+
+### Activer ton accès (une seule fois)
+1. Recolle `firestore.rules` dans Firebase → **Firestore Database → Rules**, puis clique **Publish**.
+2. Toujours dans Firestore Database, onglet **Data** : clique **+ Start collection** (ou **+ Add collection**).
+3. ID de la collection : `admins`. ID du document : **ton nom d'usager du site**, en minuscules (celui affiché en haut de l'accueil, par exemple `kiwi`).
+4. Ajoute un champ, par exemple `since` (type string) avec la date du jour. Clique **Save**.
+5. Ouvre la page propriétaire. Si quelqu'un d'autre l'ouvre, il voit seulement « This page is only for the site owner ».
+
+Pour ajouter un autre administrateur plus tard, crée un autre document dans `admins` avec son nom d'usager. Le site ne permet pas de modifier cette liste : seulement la console Firebase.
+
+### Statistiques
+- **Accounts in total** : nombre de comptes existants.
+- **Visitors** : navigateurs qui ont ouvert le site ce jour-là, comptés une fois par jour. Une personne avec un ordi et un cellulaire compte pour deux.
+- **Signed-in visitors** : même chose, mais seulement les navigateurs connectés à un compte.
+- **Sign-ins** : connexions faites avec le formulaire (les gens restent connectés d'une fois à l'autre, donc ce nombre reste petit).
+- **New accounts**, **Messages**, et **visites par page** (accueil, fiche, tracker).
+- Périodes : 7 jours, 30 jours ou 12 semaines, avec un graphique et un tableau.
+
+Ce sont seulement des compteurs par jour, dans la collection `stats` : aucun nom, aucune adresse IP, rien qui identifie qui que ce soit. Les compteurs ne font que monter de 1 ; personne ne peut les lire à part toi. Tes propres visites sur la page propriétaire ne sont pas comptées.
+
+### Messages
+- Filtres **To read / Done / All** et par type (idées, problèmes, autre).
+- **Show the screenshot** affiche la capture jointe ; clique dessus pour l'agrandir.
+- **Mark as done** range le message ; **Delete** le supprime pour de bon, avec sa capture.
+
+Les captures sont réduites dans le navigateur avant l'envoi (moins de 850 Ko) et stockées dans Firestore (`feedbackShots`). On n'utilise pas Firebase Storage, parce qu'il exige maintenant le plan payant Blaze. Le plan gratuit Spark donne 1 Go dans Firestore, soit plus de mille captures.
+
 ## Ajouter un outil
 
 1. Crée `tools/nom-de-l-outil/index.html`.
 2. Ajoute une entrée dans la liste `TOOLS` de `index.html` (à la racine).
 3. Pour qu'il utilise les comptes : mets dans son `<head>` les deux lignes
-   `<script src="../../firebase-config.js"></script>` et `<script src="../../account.js"></script>`,
+   `<script src="../../firebase-config.js"></script>`, `<script src="../../account.js"></script>` et `<script src="../../feedback.js"></script>`,
    et ajoute le nom de son dossier dans `TOOL_IDS` au début de `account.js` (pour que « Delete my account » efface aussi ses données).
-4. Pour mettre à jour un outil : remplace son `index.html`, garde ces deux lignes dans son `<head>`, et change sa version dans `TOOLS`.
+   Pour compter ses visites : ajoute `'v_nom_du_dossier'` (tirets remplacés par `_`) dans `statKeys()` de `firestore.rules`, et dans la liste `METRICS` et le tableau « Visits per page » de `admin/index.html`.
+4. Pour mettre à jour un outil : remplace son `index.html`, garde ces trois lignes dans son `<head>`, et change sa version dans `TOOLS`.

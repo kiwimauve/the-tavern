@@ -26,8 +26,21 @@
   // Add a new tool's folder name here so "Delete my account" also erases its data.
   var TOOL_IDS = ["character-sheet", "combat-tracker"];
   var m = location.pathname.match(/\/tools\/([a-z0-9-]+)\//);
-  var TOOL = m ? m[1] : "home";
+  var TOOL = m ? m[1] : (/\/admin\/(index\.html)?$/.test(location.pathname) ? "admin" : "home");
   function toolPath(p) { return String(p).replace(/^data\/users\//, "tools/" + TOOL + "/"); }
+
+  /* ---------- anonymous statistics: one counter document per day, nothing about who ---------- */
+  // stats/<YYYY-MM-DD>: browsers (once per browser per day), members (once per signed-in browser per day),
+  // signins, signups, feedback, v_<page> (once per browser per day and page). Keys must match firestore.rules.
+  function today() { var d = new Date(), z = function (n) { return (n < 10 ? "0" : "") + n; }; return d.getFullYear() + "-" + z(d.getMonth() + 1) + "-" + z(d.getDate()); }
+  function bump(field, oncePerDay) {
+    if (!B || !B.bump || TOOL === "admin") return;
+    var day = today(), flag = "tavern-seen:" + day + ":" + field;
+    try { if (oncePerDay) { if (localStorage.getItem(flag)) return; localStorage.setItem(flag, "1"); } } catch (e) {}
+    B.bump("stats/" + day, field).catch(function () { try { if (oncePerDay) localStorage.removeItem(flag); } catch (e) {} });
+  }
+  function pageVisit() { bump("browsers", true); bump("v_" + TOOL.replace(/-/g, "_"), true); }
+  (function tidy() { try { var d = today(), del = []; for (var i = 0; i < localStorage.length; i++) { var k = localStorage.key(i); if (k.indexOf("tavern-seen:") === 0 && k.indexOf("tavern-seen:" + d) !== 0) del.push(k); } del.forEach(function (k) { localStorage.removeItem(k); }); } catch (e) {} })();
 
   var cfg = window.TAVERN_FIREBASE || null;
   var makeBackend = window.TAVERN_TEST_BACKEND || (cfg && cfg.apiKey ? function () { return firebaseBackend(cfg); } : null);
@@ -57,7 +70,10 @@
           get: w(function (p) { return F.getDoc(F.doc(fs, p)).then(function (s) { return s.exists() ? s.data() : null; }); }),
           set: w(function (p, d) { return F.setDoc(F.doc(fs, p), d); }),
           del: w(function (p) { return F.deleteDoc(F.doc(fs, p)); }),
-          list: w(function (p) { return F.getDocs(F.collection(fs, p)).then(function (q) { return q.docs.map(function (d) { return { id: d.id, data: d.data() }; }); }); })
+          list: w(function (p) { return F.getDocs(F.collection(fs, p)).then(function (q) { return q.docs.map(function (d) { return { id: d.id, data: d.data() }; }); }); }),
+          count: w(function (p) { return F.getCountFromServer(F.collection(fs, p)).then(function (s) { return s.data().count; }); }),
+          bump: w(function (p, field) { var o = {}; o[field] = F.increment(1); return F.setDoc(F.doc(fs, p), o, { merge: true }); }),
+          update: w(function (p, d) { return F.updateDoc(F.doc(fs, p), d); })
         };
       });
   }
@@ -138,8 +154,8 @@
     B = b;
     var first = true;
     B.onAuth(function (u) {
-      cur = u; if (u) claimLocal(u.uid);
-      if (first) { first = false; readyResolve(); }
+      cur = u; if (u) { claimLocal(u.uid); bump("members", true); }
+      if (first) { first = false; readyResolve(); pageVisit(); }
       if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", emit, { once: true }); else emit();
     });
     return b;
@@ -181,7 +197,7 @@
           return B.deleteUser().catch(function () {}).then(function () { return B.signOut().catch(function () {}); })
             .then(function () { fail("The account couldn't be finished. Try again."); });
         });
-      }).then(function () { return { username: u, code: R }; });
+      }).then(function () { bump("signups"); return { username: u, code: R }; });
     },
 
     signIn: function (user, pass) {
@@ -189,7 +205,7 @@
       return need().then(function () { if (!u || !pass) fail("Enter your username and your password."); return getLogin(u); })
         .then(function (L) { if (!L) fail("No account uses the username “" + u + "”."); return unseal(L.p, pass); })
         .then(function (K) { if (!K) fail("Wrong password. If you forgot it, use your recovery code."); return B.signIn(email(u), K).catch(friendly); })
-        .then(function () { return { username: u }; });
+        .then(function () { bump("signins"); return { username: u }; });
     },
 
     recover: function (user, code, newPass) {
@@ -202,7 +218,7 @@
         .then(function (k) { K = k; if (!K) fail("This recovery code doesn't match that username. Check each character."); return B.signIn(email(u), K).catch(friendly); })
         .then(function () { return seal(K, newPass); })
         .then(function (p) { L.p = p; return B.set("logins/" + u, L).catch(friendly); })
-        .then(function () { return { username: u }; });
+        .then(function () { bump("signins"); return { username: u }; });
     },
 
     changePassword: function (oldPass, newPass) {
@@ -229,6 +245,30 @@
       return need().then(function () { return B.signOut().catch(friendly); }).then(function () { clearLocal(); });
     },
 
+    // Feedback works without an account. Only the site owner can read it (Firebase console → Firestore → feedback).
+    sendFeedback: function (o) {
+      o = o || {};
+      var msg = String(o.message || "").trim().slice(0, 2000);
+      return backendP.then(function (b) {
+        if (!b) fail("Feedback can't be sent right now. Check your internet connection and try again later.");
+        if (!msg) fail("Write a message first.");
+        var d = {
+          kind: ["idea", "problem", "other"].indexOf(o.kind) >= 0 ? o.kind : "other",
+          message: msg,
+          page: String(o.page || "home").slice(0, 40),
+          version: String(o.version || "").slice(0, 20),
+          created: Date.now()
+        };
+        if (o.withUser && cur) d.user = usernameOf(cur);
+        var shot = typeof o.shot === "string" && o.shot.indexOf("data:image/") === 0 && o.shot.length <= 900000 ? o.shot : null;
+        if (shot) d.shot = true;
+        var id = Array.prototype.map.call(rnd(15), function (x) { return "abcdefghijklmnopqrstuvwxyz0123456789"[x % 36]; }).join("");
+        return B.set("feedback/" + id, d).catch(friendly)
+          .then(function () { return shot ? B.set("feedbackShots/" + id, { data: shot, created: d.created }).catch(function () { fail("Your message was sent, but the screenshot couldn't be. Try sending it again with a smaller image."); }) : null; })
+          .then(function () { bump("feedback"); });
+      });
+    },
+
     deleteAccount: function (pass) {
       var u, uid, K;
       return need().then(function () { if (!cur) fail("Sign in first."); u = usernameOf(cur); uid = cur.uid; return getLogin(u); })
@@ -244,6 +284,19 @@
         .then(function () { return B.deleteUser().catch(friendly); })
         .then(function () { clearLocal(); });
     }
+  };
+  /* ---------- owner page (only works for usernames listed in the "admins" collection) ---------- */
+  api.admin = {
+    check: function () { return backendP.then(function (b) { if (!b || !cur) return false; return b.get("admins/" + usernameOf(cur)).then(function (d) { return !!d; }, function () { return false; }); }); },
+    feedback: function () { return need().then(function () { return B.list("feedback").catch(friendly); }); },
+    shot: function (id) { return need().then(function () { return B.get("feedbackShots/" + id).catch(friendly); }).then(function (d) { return d && d.data; }); },
+    setStatus: function (id, s) { return need().then(function () { return B.update("feedback/" + id, { status: s }).catch(friendly); }); },
+    remove: function (id, hasShot) {
+      return need().then(function () { return hasShot ? B.del("feedbackShots/" + id).catch(function () {}) : null; })
+        .then(function () { return B.del("feedback/" + id).catch(friendly); });
+    },
+    stats: function () { return need().then(function () { return B.list("stats").catch(friendly); }); },
+    accounts: function () { return need().then(function () { return B.count("logins").catch(friendly); }); }
   };
   window.Tavern = api;
 
