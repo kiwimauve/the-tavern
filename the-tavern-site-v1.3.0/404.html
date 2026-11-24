@@ -1,0 +1,23 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Page not found — The Tavern</title>
+<style>
+body{margin:0;min-height:100vh;display:flex;align-items:center;justify-content:center;background:#140d08;color:#efe4cc;font:1.1rem/1.6 Georgia,serif;text-align:center;padding:1.5rem}
+h1{font-size:2rem;color:#e0b25a;margin:0 0 .5rem}
+a{display:inline-block;margin-top:1rem;padding:.45rem 1.1rem;border-radius:999px;background:#e0b25a;color:#24170c;font-weight:700;text-decoration:none}
+a:focus-visible{outline:2px solid #e0b25a;outline-offset:3px}
+</style>
+</head>
+<body>
+<main>
+  <h1>This room is empty</h1>
+  <p>The page you asked for doesn't exist, or the link has changed.</p>
+  <a href="/" id="home">Go back to The Tavern</a>
+</main>
+<script>/* On a GitHub Pages project site, home is the first folder of the address. */
+if(location.hostname.endsWith("github.io")){const s=location.pathname.split("/").filter(Boolean)[0];if(s)document.getElementById("home").href="/"+s+"/"}</script>
+</body>
+</html>
