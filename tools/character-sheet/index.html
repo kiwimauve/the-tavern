@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>D&D 2024 Character Sheet</title>
-<meta name="version" content="1.14.1">
+<meta name="version" content="1.16.0">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible:wght@400;700&family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,800&display=swap" rel="stylesheet">
 <style>
@@ -353,6 +353,7 @@ nav.tabs button[aria-selected=true]{color:var(--ink);border-bottom-color:var(--a
 </style>
 <script src="../../firebase-config.js"></script>
 <script src="../../account.js"></script>
+<script src="../../feedback.js"></script>
 </head>
 <body>
 
@@ -719,7 +720,7 @@ nav.tabs button[aria-selected=true]{color:var(--ink);border-bottom-color:var(--a
 
 <script>
 "use strict";
-const APP_VERSION="1.14.1";
+const APP_VERSION="1.16.0";
 const ABILS=[["str","Strength"],["dex","Dexterity"],["con","Constitution"],["int","Intelligence"],["wis","Wisdom"],["cha","Charisma"]];
 const ABBR={str:"STR",dex:"DEX",con:"CON",int:"INT",wis:"WIS",cha:"CHA"};
 const SKILLS=[["acrobatics","Acrobatics","dex"],["animal","Animal Handling","wis"],["arcana","Arcana","int"],["athletics","Athletics","str"],["deception","Deception","cha"],["history","History","int"],["insight","Insight","wis"],["intimidation","Intimidation","cha"],["investigation","Investigation","int"],["medicine","Medicine","wis"],["nature","Nature","int"],["perception","Perception","wis"],["performance","Performance","cha"],["persuasion","Persuasion","cha"],["religion","Religion","int"],["sleight","Sleight of Hand","dex"],["stealth","Stealth","dex"],["survival","Survival","wis"]];
